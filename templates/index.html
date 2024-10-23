@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Chat Interface</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+
+        .chat-container {
+            width: 400px;
+            border-right: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            background-color: #f5f5f5;
+        }
+
+        .chat-header {
+            padding: 20px;
+            background-color: #fff;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .chat-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .chat-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .message-content {
+            background-color: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            max-width: calc(100% - 50px);
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .input-container {
+            padding: 20px;
+            border-top: 1px solid #ccc;
+            background-color: white;
+        }
+
+        .query-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .query-input:focus {
+            outline: none;
+            border-color: #0D6EFD;
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+        }
+
+        .results-container {
+            flex-grow: 1;
+            padding: 20px;
+            background-color: #fff;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .results-header {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .table-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .no-results {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            color: #666;
+        }
+
+        .loading::after {
+            content: "...";
+            animation: dots 1s steps(5, end) infinite;
+        }
+
+        @keyframes dots {
+
+            0%,
+            20% {
+                content: ".";
+            }
+
+            40% {
+                content: "..";
+            }
+
+            60%,
+            100% {
+                content: "...";
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>Data Chat</h2>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- Messages will be added here dynamically -->
+        </div>
+        <div class="input-container">
+            <input type="text" class="query-input" id="queryInput" placeholder="Ask about your data...">
+        </div>
+    </div>
+    <div class="results-container" id="resultsContainer">
+        <div class="results-header">
+            <h2>Data Table View</h2>
+        </div>
+        <div id="tableResults">
+            <div class="no-results">Table data will appear here when available</div>
+        </div>
+    </div>
+
+    <script>
+        const queryInput = document.getElementById('queryInput');
+        const chatMessages = document.getElementById('chatMessages');
+        const tableResults = document.getElementById('tableResults');
+
+        // Initialize chat with welcome message
+        window.onload = function () {
+            addMessage('Hi', 'user');
+            addMessage('Hello! How can I assist you today?', 'assistant');
+        };
+
+        queryInput.addEventListener('keypress', function (event) {
+            if (event.key === 'Enter') {
+                const question = queryInput.value.trim();
+                if (question) {
+                    addMessage(question, 'user');
+                    sendQuery(question);
+                    queryInput.value = '';
+                }
+            }
+        });
+
+        function addMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+
+            const icon = document.createElement('div');
+            icon.className = 'chat-icon';
+
+            const img = document.createElement('img');
+            img.src = type === 'user' ? '/static/user-avatar.png' : '/static/assistant-avatar.png';
+            img.alt = type === 'user' ? 'User' : 'Assistant';
+
+            icon.appendChild(img);
+
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.textContent = text;
+
+            messageDiv.appendChild(icon);
+            messageDiv.appendChild(messageContent);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showLoading() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message';
+            loadingDiv.innerHTML = `
+                <div class="chat-icon">
+                    <img src="/static/assistant-avatar.png" alt="Assistant">
+                </div>
+                <div class="message-content loading">Thinking</div>
+            `;
+            loadingDiv.id = 'loadingMessage';
+            chatMessages.appendChild(loadingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeLoading() {
+            const loadingMessage = document.getElementById('loadingMessage');
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+        }
+
+        function sendQuery(question) {
+            showLoading();
+            fetch('/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ question: question })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    removeLoading();
+                    if (data.success) {
+                        addMessage(data.answer, 'assistant');
+                        displayTableResults(data.table_data);
+                    } else {
+                        addMessage('Sorry, I encountered an error: ' + data.error, 'assistant');
+                        displayTableResults(null);
+                    }
+                })
+                .catch(error => {
+                    removeLoading();
+                    addMessage('Sorry, I encountered an error: ' + error, 'assistant');
+                    displayTableResults(null);
+                });
+        }
+
+        function displayTableResults(tableData) {
+            if (tableData) {
+                try {
+                    const htmlTable = convertToHtmlTable(tableData);
+                    tableResults.innerHTML = `
+                        <div class="table-container">
+                            ${htmlTable}
+                        </div>
+                    `;
+                } catch (error) {
+                    tableResults.innerHTML = `
+                        <div class="no-results">Error displaying table: ${error}</div>
+                    `;
+                }
+            } else {
+                tableResults.innerHTML = `
+                    <div class="no-results">Table data will appear here when available</div>
+                `;
+            }
+        }
+
+        function convertToHtmlTable(tableData) {
+            const rows = tableData.trim().split('\n');
+            if (rows.length < 2) return '';
+
+            const headers = rows[0].split('|').map(h => h.trim()).filter(h => h);
+
+            let html = '<table><thead><tr>';
+            headers.forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            for (let i = 2; i < rows.length; i++) {
+                const cells = rows[i].split('|').map(c => c.trim()).filter(c => c);
+                if (cells.length > 0) {
+                    html += '<tr>';
+                    cells.forEach(cell => {
+                        html += `<td>${cell}</td>`;
+                    });
+                    html += '</tr>';
+                }
+            }
+
+            html += '</tbody></table>';
+            return html;
+        }
+    </script>
+</body>
+
+</html>
