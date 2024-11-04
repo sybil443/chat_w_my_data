@@ -275,7 +275,7 @@
                         addMessage(data.answer, 'assistant');
                         displayTableResults(data.table_data);
                     } else {
-                        addMessage('Sorry, I encountered an error: ' + data.error, 'assistant');
+                        addMessage(data.error, 'assistant');
                         displayTableResults(null);
                     }
                 })
@@ -308,27 +308,35 @@
         }
 
         function convertToHtmlTable(tableData) {
-            const rows = tableData.trim().split('\n');
-            if (rows.length < 2) return '';
+            // If no data, return empty string
+            if (!tableData || tableData.length === 0) return '';
 
-            const headers = rows[0].split('|').map(h => h.trim()).filter(h => h);
+            // Get all headers
+            const headers = Object.keys(tableData[0]);
 
+            // Create ordered headers array with "Question" first
+            const orderedHeaders = [
+                'Question',
+                ...headers.filter(header => header !== 'Question')
+            ];
+
+            // Create table HTML
             let html = '<table><thead><tr>';
-            headers.forEach(header => {
+
+            // Add headers in order
+            orderedHeaders.forEach(header => {
                 html += `<th>${header}</th>`;
             });
             html += '</tr></thead><tbody>';
 
-            for (let i = 2; i < rows.length; i++) {
-                const cells = rows[i].split('|').map(c => c.trim()).filter(c => c);
-                if (cells.length > 0) {
-                    html += '<tr>';
-                    cells.forEach(cell => {
-                        html += `<td>${cell}</td>`;
-                    });
-                    html += '</tr>';
-                }
-            }
+            // Add data rows in order
+            tableData.forEach(row => {
+                html += '<tr>';
+                orderedHeaders.forEach(header => {
+                    html += `<td>${row[header] !== null ? row[header] : ''}</td>`;
+                });
+                html += '</tr>';
+            });
 
             html += '</tbody></table>';
             return html;
