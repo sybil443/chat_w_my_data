@@ -1,27 +1,33 @@
-# Import the necessary functions from app.py
-from app import get_llm_response, prepare_data_context
+from src.query_system import ExcelQuerySystem
+from config import Config
 import pandas as pd
 
 def test_openai_integration():
     """Test OpenAI API integration with sample questions"""
     
-    # List of test questions
+    # Initialize the query system
+    query_system = ExcelQuerySystem(Config.MODEL, Config.CSV_FILE_PATH, Config.OPENAI_API_KEY)
+    
+    # List of test questions - mix of filtering and explanation questions
     test_questions = [
+        # Data filtering questions
         "How many teams are in the data?",
         "What's the average score?",
         "Show me all teams",
-        "What's in this dataset?"
+        # General explanation questions
+        "What's in this dataset?",
+        "Can you explain what segments mean in this context?",
+        "What's the purpose of this analysis?",
+        # Mixed questions
+        "Compare the responses between segment A and B",
+        "What are the key findings about pricing?"
     ]
     
     print("\n=== Testing OpenAI Integration ===\n")
     
     # Print data context for reference
-    data_info = prepare_data_context()
     print("Data Context:")
-    print("Columns:", data_info['column_names'])
-    print("Row Count:", data_info['row_count'])
-    print("\nSample Data:")
-    print(data_info['sample_data'])
+    print(query_system.schema)
     print("\n" + "="*50 + "\n")
     
     # Test each question
@@ -30,16 +36,58 @@ def test_openai_integration():
         print("-" * 40)
         
         try:
-            response = get_llm_response(question)
-            print("Response:", response['answer'])
+            # Get both DataFrame result and explanation
+            result_df, explanation = query_system.query(question)
             
-            if response.get('data'):
+            print("Explanation:", explanation)
+            
+            if result_df is not None:
                 print("\nTable Data:")
-                print(pd.DataFrame(response['data']))
+                print(result_df)
+                print(f"\nNumber of rows in result: {len(result_df)}")
+        except Exception as e:
+            print(f"Error: {str(e)}")
+        
+        print("\n" + "="*50)
+
+def interactive_test():
+    """Interactive testing mode"""
+    query_system = ExcelQuerySystem(Config.MODEL, Config.CSV_FILE_PATH, Config.OPENAI_API_KEY)
+    
+    print("\n=== Interactive Testing Mode ===")
+    print("Type 'exit' to quit\n")
+    
+    while True:
+        question = input("\nEnter your question: ").strip()
+        
+        if question.lower() == 'exit':
+            break
+        
+        try:
+            result_df, explanation = query_system.query(question)
+            
+            print("\nExplanation:", explanation)
+            
+            if result_df is not None:
+                print("\nTable Data:")
+                print(result_df)
+                print(f"\nNumber of rows in result: {len(result_df)}")
         except Exception as e:
             print(f"Error: {str(e)}")
         
         print("\n" + "="*50)
 
 if __name__ == "__main__":
-    test_openai_integration()
+    # Ask user which mode they want to use
+    print("Choose test mode:")
+    print("1. Run all test questions")
+    print("2. Interactive mode")
+    
+    choice = input("Enter your choice (1 or 2): ").strip()
+    
+    if choice == "1":
+        test_openai_integration()
+    elif choice == "2":
+        interactive_test()
+    else:
+        print("Invalid choice. Please run again and select 1 or 2.")
